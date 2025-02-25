@@ -260,13 +260,7 @@
         </div>
 
         <label for="address">Adresse :</label>
-        <input
-          type="text"
-          id="address"
-          name="address"
-          placeholder="Entrez une adresse"
-          required
-        />
+        <input type="text" id="address" name="address" placeholder="Entrez une adresse" required />
         <button type="button" id="addressSearchBtn">Rechercher</button>
 
         <button type="button" id="toggleDrawingButton">Activer le dessin (main levée)</button>
@@ -360,6 +354,7 @@
           <h3>Informations sur la toiture</h3>
 
           <label for="Surface toiture">Surface toiture (m²) :</label>
+          <!-- La valeur de ce champ sera mise à jour depuis l'onglet 1 -->
           <input type="number" id="Surface toiture" name="Surface toiture" />
 
           <label for="Partage sa toiture">Partage sa toiture? :</label>
@@ -700,6 +695,8 @@
         const area = L.GeometryUtil.geodesicArea(latLngs);
         const areaInt = Math.round(area);
         alert(`Surface mesurée : ${areaInt.toLocaleString('fr-FR')} m²`);
+        // Correction : mise à jour du champ "Surface toiture" (onglet 5)
+        document.getElementById("Surface toiture").value = areaInt;
       } else if (e.layerType === "polyline") {
         const latLngs = layer.getLatLngs();
         if (latLngs.length < 2) {
@@ -1013,7 +1010,15 @@
               return;
             }
             const dataValue = jsonData[key];
-            if (Array.isArray(dataValue)) {
+            // Correction pour les cases à cocher dont le nom se termine par "[]"
+            if (key.endsWith("[]")) {
+              const checkboxes = form.querySelectorAll(`[name='${key}']`);
+              checkboxes.forEach(checkbox => {
+                if (Array.isArray(dataValue) && dataValue.includes(checkbox.value)) {
+                  checkbox.checked = true;
+                }
+              });
+            } else if (Array.isArray(dataValue)) {
               dataValue.forEach(val => {
                 const checkbox = form.querySelector(`[name="${key}"][value="${val}"]`);
                 if (checkbox) {
