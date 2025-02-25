@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FRH PRO formulaire  - v55</title>
+  <title>FRH PRO formulaire  - v56</title>
 
   <!-- (1) Leaflet CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
@@ -695,7 +695,7 @@
         const area = L.GeometryUtil.geodesicArea(latLngs);
         const areaInt = Math.round(area);
         alert(`Surface mesurée : ${areaInt.toLocaleString('fr-FR')} m²`);
-        // Correction : mise à jour du champ "Surface toiture" (onglet 5)
+        // Mise à jour du champ "Surface toiture" (onglet 5)
         document.getElementById("Surface toiture").value = areaInt;
       } else if (e.layerType === "polyline") {
         const latLngs = layer.getLatLngs();
@@ -967,13 +967,21 @@
       const rawFormData = new FormData(form);
       const formObject = {};
       rawFormData.forEach((value, key) => {
-        if (formObject[key] !== undefined) {
-          if (!Array.isArray(formObject[key])) {
-            formObject[key] = [formObject[key]];
+        // Pour les clés se terminant par "[]", on sauvegarde toujours sous forme de tableau
+        if(key.endsWith("[]")) {
+          if (!formObject[key]) {
+            formObject[key] = [];
           }
           formObject[key].push(value);
         } else {
-          formObject[key] = value;
+          if (formObject[key] !== undefined) {
+            if (!Array.isArray(formObject[key])) {
+              formObject[key] = [formObject[key]];
+            }
+            formObject[key].push(value);
+          } else {
+            formObject[key] = value;
+          }
         }
       });
       const center = map.getCenter();
@@ -1010,7 +1018,6 @@
               return;
             }
             const dataValue = jsonData[key];
-            // Correction pour les cases à cocher dont le nom se termine par "[]"
             if (key.endsWith("[]")) {
               const checkboxes = form.querySelectorAll(`[name='${key}']`);
               checkboxes.forEach(checkbox => {
