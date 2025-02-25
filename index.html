@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FRH PRO formulaire  - v56</title>
+  <title>FRH PRO formulaire  - v5</title>
 
   <!-- (1) Leaflet CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
@@ -142,6 +142,7 @@
     .form-section input[type="text"],
     .form-section input[type="number"],
     .form-section input[type="time"],
+    .form-section input[type="email"],
     .form-section textarea,
     .form-section select {
       width: 100%;
@@ -239,7 +240,7 @@
 
 <body>
   <div class="container">
-    <h1 class="page-title">Formulaire FRH PRO - Vue Onglets (Gestion Territoires + Primes)</h1>
+    <h1 class="page-title">Formulaire FRH PRO </h1>
 
     <div class="tabNav" id="topTabNav">
       <button type="button" class="tablinks" onclick="openTab(event, 'tab1')">1. Localisation / Données Irradiation</button>
@@ -328,10 +329,14 @@
 
           <label for="Prénom">Prénom :</label>
           <input type="text" id="Prénom" name="Prénom"/>
+          
+          <!-- Nouveaux champs ajoutés -->
+          <label for="telephone">Téléphone :</label>
+          <input type="text" id="telephone" name="telephone" pattern="\d{10}" title="Le numéro de téléphone doit comporter 10 chiffres" placeholder="Ex : 0123456789" />
 
-          <label for="Statut">Statut :</label>
-          <input type="text" id="Statut" name="Statut"/>
-
+          <label for="email">Email :</label>
+          <input type="email" id="email" name="email" placeholder="exemple@domaine.com" />
+          
           <label for="Propietaire/Locataire">Propietaire/Locataire :</label>
           <select id="Propietaire/Locataire" name="Propietaire/Locataire">
             <option value="" disabled selected>indiquer si propietaire ou locataire</option>
@@ -503,15 +508,8 @@
           <label for="comments">Commentaires :</label>
           <textarea id="comments" name="comments" placeholder="Entrez vos commentaires"></textarea>
         </div>
-        <!-- Exemple : Input file caché ou non + label cliquable -->
-        <input type="file" id="mapCaptureFile" accept="image/png, image/jpeg" style="display:none;" />
-        <label for="mapCaptureFile" style="cursor:pointer; color:blue; text-decoration:underline;">
-          Sélectionner la capture
-        </label>
-        <br/><br/>
-        <!-- Boutons PDF + gestion JSON -->
+        <!-- Boutons pour la gestion JSON (export et import) -->
         <div style="margin-bottom:15px;">
-          <button type="button" id="exportPDFBtn">Exporter en PDF</button>
           <button type="button" id="saveToFile">Télécharger les données</button>
           <input type="file" id="loadFromFile" style="display: none;" />
           <button type="button" id="uploadFile">Charger un fichier</button>
@@ -854,106 +852,8 @@
 
     /***************************************************
      * EXPORT PDF : Version simplifiée (Page unique)
+     * (Bouton et lien supprimés dans l'onglet 10)
      ***************************************************/
-    const mapCaptureFileInput = document.getElementById("mapCaptureFile");
-    const exportPDFBtn = document.getElementById("exportPDFBtn");
-    let mapCaptureDataURL = null;
-    let mapCaptureFormat = null;
-
-    mapCaptureFileInput.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (!file) {
-        mapCaptureDataURL = null;
-        mapCaptureFormat = null;
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        mapCaptureDataURL = e.target.result;
-        if (file.type.toLowerCase().includes("jpeg")) {
-          mapCaptureFormat = "JPEG";
-        } else if (file.type.toLowerCase().includes("png")) {
-          mapCaptureFormat = "PNG";
-        } else {
-          mapCaptureFormat = "PNG";
-        }
-        alert("Capture de carte sélectionnée !");
-      };
-      reader.readAsDataURL(file);
-    });
-
-    exportPDFBtn.addEventListener("click", exportStudyReportPDF);
-
-    async function exportStudyReportPDF() {
-      try {
-        if (!mapCaptureDataURL) {
-          alert("Veuillez sélectionner la capture de la carte avant de générer le PDF.");
-          return;
-        }
-        // Masquer temporairement le canvas de dessin
-        const drawingCanvas = document.getElementById("drawingCanvas");
-        let drawingCanvasParent = null;
-        if (drawingCanvas) {
-          drawingCanvasParent = drawingCanvas.parentNode;
-          drawingCanvasParent.removeChild(drawingCanvas);
-        }
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-
-        // En-tête
-        pdf.setFillColor(0, 92, 160);
-        pdf.rect(0, 0, pageWidth, 25, "F");
-        const frhProLogoUrl = "https://raw.githubusercontent.com/m2arek/parallele/main/frh_pro_logo.png";
-        const frhProLogo = new Image();
-        frhProLogo.crossOrigin = "Anonymous";
-        frhProLogo.src = frhProLogoUrl;
-        await new Promise((resolve) => { frhProLogo.onload = resolve; });
-        pdf.addImage(frhProLogo, "PNG", 10, 5, 30, 30);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(22);
-        pdf.text("FRH PRO", pageWidth / 2, 17, { align: "center" });
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(16);
-        const companyName = document.getElementById("companyName")?.value || "";
-        const mainTitle = `Rapport d'étude photovoltaïque\n${companyName}`;
-        const titleLines = pdf.splitTextToSize(mainTitle, pageWidth - 20);
-        pdf.text(titleLines, pageWidth / 2, 40, { align: "center" });
-        let yPos = 50;
-        const imgTemp = new Image();
-        imgTemp.src = mapCaptureDataURL;
-        await new Promise((resolve) => { imgTemp.onload = resolve; });
-        const pdfWidth = pageWidth - 30;
-        const ratio = imgTemp.height / imgTemp.width;
-        const pdfHeight = pdfWidth * ratio;
-        pdf.addImage(mapCaptureDataURL, mapCaptureFormat, 15, yPos, pdfWidth, pdfHeight);
-        yPos += pdfHeight + 10;
-        pdf.setFontSize(12);
-        const addressVal = document.getElementById("address")?.value || "";
-        const latVal = document.getElementById("latitudeIrr")?.value || "";
-        const lonVal = document.getElementById("longitudeIrr")?.value || "";
-        const productibleVal = document.getElementById("productible")?.value || "";
-        pdf.text(`Client : ${companyName}`, 15, yPos);
-        yPos += 6;
-        pdf.text(`Adresse : ${addressVal}`, 15, yPos);
-        yPos += 6;
-        pdf.text(`Coordonnées : lat=${latVal}, lon=${lonVal}`, 15, yPos);
-        yPos += 6;
-        pdf.text(`Productible : ${parseFloat(productibleVal).toLocaleString("fr-FR")} kWh/kWc/an`, 15, yPos);
-        yPos += 10;
-        let pdfFileName = "Rapport_Etude.pdf";
-        if (companyName) {
-          pdfFileName = `Rapport_${companyName}.pdf`;
-        }
-        pdf.save(pdfFileName);
-        if (drawingCanvas && drawingCanvasParent) {
-          drawingCanvasParent.appendChild(drawingCanvas);
-        }
-      } catch (e) {
-        console.error("Erreur exportStudyReportPDF:", e);
-        alert("Une erreur s'est produite lors de l'export PDF (voir console).");
-      }
-    }
 
     /***************************************************
      * SAUVEGARDER / CHARGER JSON
